@@ -386,6 +386,11 @@ std::vector<ExprHandle> TensorExprKernel::sizesForValue(
   if (v->type()->isSubtypeOf(*NoneType::get())) {
     return {};
   }
+  if (v->type()->kind() == TypeKind::ClassType) {
+    // TODO: By prepack class name run corresponding op with random inputs with
+    // the same sizes and get the size of the result.
+    return {int64_t{sizeof(uintptr_t)}};
+  }
   GRAPH_DEBUG("Unknown sizes for the node: ", *v->node());
   GRAPH_DEBUG("Full fusion group graph:\n", *v->node()->owningGraph());
   std::string msg = std::string("Unhandled node kind (in sizesForValue): ") +
@@ -1245,10 +1250,16 @@ TensorExprKernel::TensorExprKernel(
 }
 
 void TensorExprKernel::run(Stack& stack) {
+  std::cout << "XXX " << __FILE__ << ":" << __LINE__ << " " << __FUNCTION__
+            << std::endl;
   if (!use_fallback_ && !allow_fallback_) {
+    std::cout << "XXX " << __FILE__ << ":" << __LINE__ << " " << __FUNCTION__
+              << std::endl;
     runKernel(stack);
   } else if (!use_fallback_ && allow_fallback_) {
     try {
+      std::cout << "XXX " << __FILE__ << ":" << __LINE__ << " " << __FUNCTION__
+                << std::endl;
       runKernel(stack);
     } catch (...) {
       fallback(stack);
@@ -1300,17 +1311,25 @@ StmtPtr TensorExprKernel::getCodeGenStmt() {
 }
 
 void TensorExprKernel::runKernel(Stack& stack) {
+  std::cout << "XXX " << __FILE__ << ":" << __LINE__ << " " << __FUNCTION__
+            << " nInputs_:" << nInputs_ << std::endl;
   // Set up arguments (inputs, then outputs) for kernel call.
   auto inputs = last(stack, nInputs_);
   std::vector<at::Tensor> outputs;
 
   std::vector<CodeGen::CallArg> runArgs = prepareRunArgs(inputs, outputs);
+  std::cout << "XXX " << __FILE__ << ":" << __LINE__ << " " << __FUNCTION__
+            << std::endl;
 
   // Call the kernel.
   codegen_->call(runArgs);
+  std::cout << "XXX " << __FILE__ << ":" << __LINE__ << " " << __FUNCTION__
+            << std::endl;
 
   // Update the stack.
   drop(stack, nInputs_);
+  std::cout << "XXX " << __FILE__ << ":" << __LINE__ << " " << __FUNCTION__
+            << std::endl;
   for (auto& o : outputs) {
     push_one(stack, std::move(o));
   }
